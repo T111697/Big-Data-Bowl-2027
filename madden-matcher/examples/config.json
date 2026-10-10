@@ -1,0 +1,14 @@
+{
+  "max_plays": 24,
+  "max_sets": 8,
+  "minimum_score": 0.65,
+  "max_play_weight": 0.35,
+  "prior_routes": 20,
+  "joint_weight": 0.2,
+  "ridge": 1e-05,
+  "top_k": 5,
+  "include_hybrid": false,
+  "allowed_personnel": [],
+  "locked_play_ids": [],
+  "excluded_play_ids": []
+}

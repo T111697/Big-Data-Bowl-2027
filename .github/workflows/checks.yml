@@ -8,10 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r nfl-team-index/requirements.txt
+      - run: pip install -r nfl-team-index/requirements.txt -r madden-matcher/requirements.txt
       - run: python -m unittest discover -s nfl-team-index -p 'test_*.py'
+      - run: python -m unittest discover -s madden-matcher -p 'test_*.py'
+      - run: python madden-matcher/cli.py --catalog madden-matcher/examples/catalog.json --inputs madden-matcher/examples/inputs --out /tmp/madden-smoke

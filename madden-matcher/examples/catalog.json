@@ -1,0 +1,139 @@
+{
+  "schema_version": "madden-catalog-1.0",
+  "game": "Madden NFL 27",
+  "plays": [
+    {
+      "id": "0",
+      "name": "0",
+      "formation": "Shotgun",
+      "set_id": "demo-set",
+      "set_name": "demo-set",
+      "personnel": "11",
+      "tags": [
+        "PASS_PLAY"
+      ],
+      "source_url": "https://example.test/0",
+      "route_evidence": "SYNTHETIC",
+      "routes": [
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR1",
+          "slot": 0,
+          "x": -10,
+          "y": -1,
+          "confidence": "synthetic"
+        },
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR2",
+          "slot": 1,
+          "x": 10,
+          "y": -1,
+          "confidence": "synthetic"
+        }
+      ]
+    },
+    {
+      "id": "1",
+      "name": "1",
+      "formation": "Shotgun",
+      "set_id": "demo-set",
+      "set_name": "demo-set",
+      "personnel": "11",
+      "tags": [
+        "PASS_PLAY"
+      ],
+      "source_url": "https://example.test/1",
+      "route_evidence": "SYNTHETIC",
+      "routes": [
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR1",
+          "slot": 0,
+          "x": -10,
+          "y": -1,
+          "confidence": "synthetic"
+        },
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR2",
+          "slot": 1,
+          "x": 10,
+          "y": -1,
+          "confidence": "synthetic"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "2",
+      "formation": "Shotgun",
+      "set_id": "demo-set",
+      "set_name": "demo-set",
+      "personnel": "11",
+      "tags": [
+        "PASS_PLAY"
+      ],
+      "source_url": "https://example.test/2",
+      "route_evidence": "SYNTHETIC",
+      "routes": [
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR1",
+          "slot": 0,
+          "x": -10,
+          "y": -1,
+          "confidence": "synthetic"
+        },
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR2",
+          "slot": 1,
+          "x": 10,
+          "y": -1,
+          "confidence": "synthetic"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "name": "3",
+      "formation": "Shotgun",
+      "set_id": "demo-set",
+      "set_name": "demo-set",
+      "personnel": "11",
+      "tags": [
+        "PASS_PLAY"
+      ],
+      "source_url": "https://example.test/3",
+      "route_evidence": "SYNTHETIC",
+      "routes": [
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR1",
+          "slot": 0,
+          "x": -10,
+          "y": -1,
+          "confidence": "synthetic"
+        },
+        {
+          "routeName": "Go",
+          "position": "WR",
+          "depthChartSlot": "WR2",
+          "slot": 1,
+          "x": 10,
+          "y": -1,
+          "confidence": "synthetic"
+        }
+      ]
+    }
+  ],
+  "notice": "SYNTHETIC SOFTWARE EXAMPLE. Not actual Madden or NFL data."
+}
