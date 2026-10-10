@@ -1,30 +1,19 @@
 {
-  "algorithm_version": "madden-matcher-1.0",
-  "input": {
-    "schema_version": "1.1.0",
-    "required": ["team", "season", "route_requirements"],
-    "route_cell_fields": ["lined_up_position", "offense_formation", "receiver_alignment", "route_ran", "routes"],
-    "optional_joint_requirements": {
-      "fields": ["formation", "distribution", "observed_slots", "plays"],
-      "observed_slot_fields": ["role", "route"],
-      "scope": "PARTIAL_SAME_PLAY_ROLE_ROUTE_MULTISET",
-      "complete_concept_verified": false
-    }
-  },
-  "catalog": {
-    "schema_version": "madden-catalog-1.0",
-    "game": "Madden NFL 27",
-    "required_play_fields": ["id", "name", "formation", "set_id", "set_name", "personnel", "tags", "routes", "source_url", "route_evidence"],
-    "route_fact_fields": ["slot", "position", "depthChartSlot", "side", "x", "y", "routeName", "confidence"]
-  },
-  "output": {
-    "schema_version": "madden-matcher-1.0",
-    "required": ["team", "season", "playbook", "requirements"],
-    "curated_play_fields": ["play_id", "formation", "set", "personnel", "proposed_weight", "source_url", "assignments", "protection_rules", "read_progression"],
-    "weights": "ASSUMED_MARGINAL_RECONSTRUCTION_MIX_NOT_IDENTIFIED_NFL_CALL_FREQUENCY",
-    "unknowns": ["NFL full concepts", "motion compatibility", "QB progression", "protection rules", "intended adjustments", "native Madden import format"],
-    "score": "HEURISTIC_COMPATIBILITY_NOT_CALIBRATED_PROBABILITY",
-    "objective": "PROJECTED_COMPATIBLE_OBSERVED_ROUTE_FEATURES_NOT_EPA_OR_WIN_VALUE"
-  },
-  "contract_type": "DOCUMENTED_INTERFACE_NOT_JSON_SCHEMA"
+  "contract_version": "2.0",
+  "algorithm_version": "madden-matcher-2.0.0",
+  "input_schemas": ["1.1.0", "1.2.0"],
+  "new_input_required": ["team", "season", "route_requirements", "source_snapshot_id", "capabilities"],
+  "producer_manifest": "mapping-input-batch-1.0",
+  "joint_adapter_version": "role-route-adapter-2.0",
+  "catalog_schema": "madden-catalog-1.0",
+  "run_schema": "madden-run-1.0",
+  "identity": ["algorithm", "implementation_sha256", "catalog_sha256", "config", "input_content_hashes", "lineage_hashes"],
+  "projection": "Separate normalized individual and partial-joint distributions with explicit unknown sinks; channel weights apply to losses",
+  "formation_axes": ["family", "backfield_occupancy", "family_evidence", "distribution_proxy"],
+  "coverage_metrics": ["selected_book_coverage", "positive_weight_support_coverage", "route_coverage_mass", "positive_weight_route_coverage", "overall_input_coverage_mass"],
+  "unknowns": ["full NFL concepts", "verified NFL outside alignment", "EMPTY parent family", "motion compatibility", "QB progression", "protection", "intended adjustments", "native Madden import"],
+  "score": "HEURISTIC_COMPATIBILITY_NOT_CALIBRATED_PROBABILITY",
+  "support_weight": "COUNT_HEURISTIC_NOT_CALIBRATED_UNCERTAINTY",
+  "weights": "ASSUMED_PROXY_MIX_NOT_IDENTIFIED_NFL_CALL_FREQUENCY",
+  "contract_type": "DOCUMENTED_INTERFACE_WITH_RUNTIME_FIELD_AND_CAPABILITY_VALIDATION"
 }

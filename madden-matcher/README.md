@@ -1,87 +1,102 @@
-# Observed NFL tendencies → custom Madden playbook proxy
+# Observed NFL tendencies → Madden scheme proxy
 
-This stage consumes the corrected `1.1.0` exports from PR #1, preserves `WR` and `SLOT_WR`, and produces modeling-tool JSON plus a CSV for manual Madden assembly. It does not need film. It does not reconstruct actual NFL calls, identify true call frequencies, estimate causal player effects, or predict EPA/wins.
+The hardened matcher consumes corrected NFL mapping schemas 1.1.0 (legacy) or 1.2.0 (identified producer), and emits immutable, auditable modeling runs. It requires no film. Matches are scheme proxies, not verified NFL calls, scouting grades, causal player effects or predictions of EPA/wins.
 
-## Quick start
+## Run
 
 ```bash
 pip install -r nfl-team-index/requirements.txt -r madden-matcher/requirements.txt
+python nfl-team-index/pipeline.py --tracking-teams CHI
+python nfl-team-index/enrich.py
+python nfl-team-index/geometry.py
+python nfl-team-index/context_audit.py
+python nfl-team-index/validate_export.py
+python madden-matcher/build_inputs.py
 
-# Public catalog, bounded concurrent acquisition with cached page hashes.
-python madden-matcher/acquire.py --details 160 --workers 4
+# Public pages only. TTL-aware revalidation; refresh forces a new fetch.
+python madden-matcher/acquire.py --details 160 --cache-mode revalidate --ttl 86400
 
-# Optional but recommended: retain partial same-play receiver combinations.
-# Reads the existing TeamStore without changing its tables or schema.
-python madden-matcher/build_inputs.py --snapshot nfl-team-index/snapshot-v2
-
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python madden-matcher/cli.py \
-  --inputs madden-matcher/data/inputs --teams ALL --out madden-matcher/outputs/run
-
-python madden-matcher/validate.py --outputs madden-matcher/outputs/run
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python madden-matcher/cli.py --teams ALL
+python madden-matcher/validate.py --outputs madden-matcher/outputs \
+  --report madden-matcher/validation.json
 python -m unittest discover -s madden-matcher -p 'test_*.py'
 ```
 
-The existing `nfl-team-index/exports-v2` inputs also work without partial-combination enrichment. No Kaggle token is needed for this stage once the local index exists. Source data and real outputs stay outside git. To run without source datasets or network access:
+Shared defaults in `research_contracts.py` are snapshot-v3, exports-v3 and inputs-v3. Directory names never determine schema version. Override `--out`, `--snapshot`, `--exports` and `--inputs` explicitly for alternate source roots/runs. The un-enriched exports-v3 also work as matcher inputs with their producer manifest. `--tracking-teams NONE` is a supported metadata-only path; geometry publishes an empty normal-schema table and NOT_MATERIALIZED status. No Kaggle token is needed after source collection.
+
+Offline synthetic demonstration:
 
 ```bash
 python madden-matcher/cli.py --catalog madden-matcher/examples/catalog.json \
   --inputs madden-matcher/examples/inputs --out /tmp/madden-example
+python madden-matcher/validate.py --outputs /tmp/madden-example --report /tmp/example-validation.json
 ```
 
-The example is synthetic software data, not real Madden or NFL evidence.
+The example contains no real NFL or Madden evidence. Source data, credentials, snapshots and real outputs remain outside git.
 
-## Catalog boundaries
+## Evidence and formation axes
 
-The acquisition adapter reads publicly rendered JSON from Madden Tools pages labeled Madden 27. It takes the formation sets listed by the Bears book, then the union of plays on those public set pages. Those pages contain plays from other books, so **the resulting pool is not a verified Bears playbook**. It is a bounded candidate pool for a custom playbook.
+Public Madden Tools pages supply formation/personnel/tags and, where available, receiver route annotations. The initial catalog is the union of plays from 44 formation sets listed by the Bears book. It is not verified Bears-only play membership. It has 1,364 plays, 919 pure passing candidates and 159 plays with detailed annotations from 160 fetched detail pages. Hardening comparisons deliberately hold this original catalog constant to isolate the algorithm changes.
 
-The initial snapshot has 1,364 plays in 44 sets, including 919 pure passing candidates. A deterministic round-robin sample across sets fetched 160 passing detail pages; 159 contained route annotations. The other plays have tags only. This limits the book's breadth and introduces catalog sampling bias. Increase `--details` or supply a validated compatible catalog to expand it. Zero acquisition failures were recorded for this snapshot; future failures are recorded rather than concealed.
+Source EMPTY means empty backfield, with its parent formation unknown. It matches publisher empty-set proxies across parent families, with reduced formation evidence. It is not blindly converted to Shotgun. Other known formation families must agree; known distribution contradictions reject candidates. Unsupported formations receive explicit translation-gap abstention reasons.
 
-Only play identities, formation/personnel metadata, tags and route annotation facts are retained. Editorial analysis and claimed read progressions are excluded. Public annotations labeled `game-verified` or `owner-confirmed` remain publisher claims, not independent verification. Some diagram asset paths reference Madden 26; these are flagged, and image geometry is not imported. Final play availability and assignments must be checked in the user's Madden version/platform. No authentication, subscription content or private playbook is required.
+Source WR is treated as a generic receiver role, not verified outside alignment. SLOT_WR remains a source slot role compared with the catalog's coordinate-based slot proxy. Depth-chart WR3 never automatically means slot. Set-name and coordinate proxies do not establish NFL alignment, legal on/off-line status, motion, intended adjustments or full concepts. Publisher `game-verified` labels remain publisher claims; diagram paths referring to Madden 26 are flagged. Check play availability and assignments in the intended game version/platform.
 
-## Matching logic
+## Scoring and accepted slot incidence
 
-1. Aggregate observed route cells across down/motion into formation family × receiver distribution × source role × route. Preserve original contexts and sparse flags for audit. These are conditional counts within the supplied prospect cohort, not full-offense tendencies.
-2. Normalize aliases with explicit strength reductions. `Curl` can support `HITCH`; `Comeback` receives weaker support. Option/composite routes and protection labels remain unknown unless explicitly modeled. Formation families must agree. Known receiver-distribution contradictions reject a candidate.
-3. Derive outside/slot and distribution proxies from publisher coordinates. Depth-chart WR3 is never automatically labeled slot. Proxies cannot establish on/off-line legality, hash/boundary alignment, actual NFL responsibilities or motion compatibility.
-4. Score individual matches using route strength, role strength, formation and distribution evidence. The score is a transparent heuristic, **not a calibrated probability**. An annotation score is `0.85 × (0.55 route + 0.20 role + 0.15 formation + 0.10 distribution)`. Unknown distribution contributes 0.35; imperfect role/alias support is reduced. Tag-only evidence is downweighted by 0.55 instead of 0.85 and has unknown role.
-5. For partial same-play observations, solve an injective receiver-slot assignment. Each observed receiver gets a distinct catalog slot. Maximize the worst pair compatibility, then total compatibility. A combination passes only if every assigned pair clears the threshold. Unobserved receivers and adjustments stay unknown; `complete_concept_verified` is always false.
-6. Rank candidate explanations deterministically. Default threshold 0.65 makes tag-only and family-only evidence insufficient for acceptance. Missing evidence produces abstention. `top_k` controls reported rankings, not the optimizer's candidate pool.
+Individual score is `0.85 × (0.55 route + 0.20 role + 0.15 formation + 0.10 distribution)` for publisher annotation evidence. Route aliases reduce route strength; generic source WR uses 0.75 role strength independent of whether its catalog proxy is inside/outside. Empty-backfield translation uses 0.75 formation strength, preserving parent-family uncertainty. Unknown distribution contributes 0.35. Scores are heuristic compatibility, not calibrated probabilities.
 
-At the default threshold, provable score upper bounds prune family-only candidates (maximum 0.61625) and tag-only candidates (maximum 0.495). Formation, distribution, position and pass/run filters further reduce work. Lower custom thresholds automatically restore broader candidate pools. Validation compares indexed and exhaustive **accepted** candidates; rejected low-score rows need not appear in rankings.
+A partial same-play combination uses an injective assignment: one distinct catalog receiver slot per observed receiver. Maximize the worst pair compatibility, then the sum. Unobserved receivers remain unknown, and complete_concept_verified stays false.
 
-Down, motion, target outcomes and defensive context are preserved upstream, but not asserted as catalog compatibility. Their Madden-side labels have not been independently established. Intended protection, QB reads, option decisions and timing remain null/unknown. Target EPA, target rate and positive outcomes never influence selection or weights, preventing outcome-based selection from masquerading as concept identification.
+At the default threshold 0.65, family-only (upper bound 0.61625) and tag-only (upper bound 0.495) evidence cannot be accepted. Candidate indexing safely prunes them; lower thresholds restore the wider ranking pool. Only **distinct slots whose individual score meets the actual run threshold** contribute projected counts. Subthreshold family/role evidence cannot inflate multiplicity. Presence tags never establish executable slot counts, even when a custom threshold accepts their diagnostic compatibility score.
 
-## Curation and weights
+Down/motion/sparse contexts and exact independent player/game counts are retained when available. Support weight `n/(n+20)` is explicitly a count heuristic, not calibrated uncertainty. All target outcomes are excluded from scoring, selection and weights. Protection, QB progression and intended adjustments remain null. Missing/unsupported joint observations are reported with reasons and play counts instead of silently disappearing.
 
-A greedy facility-coverage pass selects a compact set of accepted candidates, subject to play and formation-set budgets. Observed feature mass and `n/(n+20)` reliability control coverage importance. A small penalty discourages opening unnecessary sets. Locked/excluded plays and personnel restrictions are enforced. This is an approximation, not a globally optimal discrete book search.
+## Selection and separate-channel reconstruction
 
-A second SLSQP optimization fits nonnegative play-mixture weights that sum to one, with a per-play cap and ridge regularization. It minimizes weighted squared error between observed and projected compatible route features. Defaults are 24 plays, 8 sets, a 0.35 per-play weight cap, and ridge `1e-5`.
+A greedy facility-coverage approximation chooses accepted candidates under play/set budgets, locks/exclusions and personnel filters. Before each move, an exact attainable-play capacity bound checks whether the remaining set budget can still meet the mixture cap. If the bound proves insufficient, an infeasibility status includes the proof; unresolved search failure is a distinct status. This capacity check proves count/set/cap feasibility, not global coverage optimality.
 
-With enriched inputs, individual features receive 80% of the target feature mass and partial-combination features 20%. Catalog compatible-route multiplicities and joint-presence features are normalized within each selected play to construct the projection matrix. This is a **chosen reconstruction representation**, not an identified generative model of NFL play calls. A single route can contribute to alternative individual features; joint constraints are where distinct slots are enforced. Untargeted/unobserved catalog routes and omitted NFL receivers are not silently counted as observed.
+SLSQP fits nonnegative weights summing to 1 with a per-play cap and ridge. Individual and partial-joint features have **separate normalized projection blocks**, each with an explicit unknown sink for plays unsupported in that channel. Channel weights multiply loss terms, not inconsistent counts in one global denominator. Weight 0 disables a channel; weight 1 permits joint-only reconstruction. With no joint observations, the individual channel receives the full weight. Duplicate canonical joint cells are consolidated.
 
-Interpret weights as an assumed proxy mix for simulations, not a recommended live play-call rate. A high compatibility or low residual says nothing by itself about football value. Multiple books can explain the same partial observations. Budget/cap infeasibility and unsupported locks produce explicit errors/statuses rather than fabricated weights.
+Defaults: 24 plays, 8 sets, max play weight 0.35, ridge 1e-5, joint loss weight 0.20. Zero/negligible-weight nonlocked plays are pruned and the remaining book refitted when the cap permits. Locks may remain at zero weight. This is a chosen partial-feature reconstruction model; weights are an assumed simulation proxy mixture, not identified NFL call frequencies or recommended live play-call rates. Different books can explain the same partial observations. Geometry, film and downstream value models are separate evidence stages.
 
-Customize all model parameters through `--config madden-matcher/examples/config.json`. Config-file fields take precedence over individual flags. Common flags include `--max-plays`, `--max-sets`, `--personnel 11,12`, repeated `--lock-id` and `--exclude-id`, and `--teams CHI,GB`. Set `joint_weight` to zero for an individual-only sensitivity run.
+All Config fields can be overridden with `--config madden-matcher/examples/config.json`; the file takes precedence over individual flags. Other flags include `--max-plays`, `--max-sets`, `--personnel 11,12`, repeated `--lock-id`/`--exclude-id`, and `--teams CHI,GB`. Missing directories, empty input sets, absent requested teams, duplicate profiles, invalid schemas and hash mismatches fail explicitly.
 
-## Outputs and imports
+## Immutable runs and imports
 
-| Output | Use |
+Each content/configuration identity gets a run directory. Publication writes all files into staging, then renames the complete directory and atomically updates the root pointer. Previous runs remain available. A frozen copy of the catalog, every selected input, and its source-key lineage accompany the outputs. Cached runs verify every artifact hash before reuse. Catalog compilation is cached in process with a bounded cache. Changed source bytes, lineage, catalog semantics, configuration or algorithm version produce a new run ID.
+
+| Artifact | Purpose |
 | --- | --- |
-| `TEAM-YEAR-custom-playbook.json` | Modeling-tool import: selected plays, proposed weights, personnel, route assignments, evidence, ranked requirements, residuals and unknowns |
-| `TEAM-YEAR-custom-playbook.csv` | Human assembly worksheet with formation/set/play names and source links |
-| `batch-summary.json` | Team-season status, route and weighted-feature coverage, residuals, cache/runtime |
-| Validation report | Constraint checks, accepted-candidate parity, cache reuse, measured runtime |
+| Root run-manifest.json | Pointer and hash of the exact published run |
+| runs/ID/run-manifest.json | Frozen identity, config, requested profiles, source inputs and artifact hashes |
+| runs/ID/TEAM-YEAR-custom-playbook.json | Modeling-tool import: weights, assignments, evidence, ranked requirements and diagnostics |
+| Matching CSV | Manual Madden assembly worksheet |
+| runs/ID/inputs and catalog.json | Reproducible frozen inputs, memberships and public catalog |
+| Root batch-summary.json | Last invocation status/timing, including cache hits |
 
-`route_coverage_mass` measures supported individual route mass within supported canonical input routes. `overall_input_coverage_mass` also accounts for unsupported source route categories. `coverage_mass` includes the configurable joint feature channel and must not be described as full-offense coverage. `projected_total_variation` is a distance between normalized weighted feature vectors, not prediction accuracy.
+Use `cli.resolve_run(output_dir)` to resolve the current immutable run. Consumers must follow the manifest rather than glob an output directory. Validation reads that exact run and verifies its identity/configuration/artifacts; cache benchmarks run in a temporary directory with the recorded configuration. Validation never rewrites the inspected run. Reports must be saved outside the output directory.
 
-The JSON is the contract for our own model. **No native Madden binary import/export is implemented.** The CSV supports manual custom-playbook assembly. The modeling UI should expose source scope, abstentions, coverage and unknown assignments alongside every proxy book.
+These JSON files are for our modeling tool. No native Madden binary import is implemented; CSV supports manual assembly. A consuming UI must show source scope, unknown responsibilities, diagram warnings, abstentions and both coverage metrics.
 
-## Reuse, optimization and validation
+## Diagnostics and lineage
 
-Compile the catalog once per batch. Inverted indexes prune formations/routes before scoring; selected-play matrices use vectorized NumPy operations and an analytic optimizer gradient. Output caching hashes input bytes, semantic catalog contents, configuration and the algorithm version. Acquisition timestamps do not invalidate unchanged catalog semantics. Changes to routes or other play metadata do. Bump `VERSION` when changing scoring/curation behavior. Warm runs reuse complete per-team outputs and regenerate assembly sheets.
+- selected_book_coverage: weighted observed-feature support available somewhere in the selected book.
+- positive_weight_support_coverage: support from plays above the recorded numerical threshold.
+- route_coverage_mass: selected-book individual route support within canonical observed routes.
+- positive_weight_route_coverage: corresponding support in the fitted positive-weight mix.
+- overall_input_coverage_mass: selected individual support including unsupported source route categories in the denominator.
+- projected_total_variation: channel-weighted feature distance, including explicit unknown sinks; not NFL concept accuracy. Version 1 distances are not comparable because the normalization changed.
+- Stable requirement/source feature IDs, snapshot ID, adapter version and frozen memberships allow tracing selected requirements back to player/game/play keys. Source counts are cohort-conditional, never full-offense coverage.
 
-The offline tests cover route unknowns, role/formation conflicts, injective assignments, constraints and infeasibility, deterministic ordering, outcome exclusion, index parity and cache invalidation. GitHub CI runs these alongside PR #1 tests and a synthetic CLI smoke test. `validate.py` audits every real output and benchmarks a Chicago profile against exhaustive accepted-candidate matching. It does not establish NFL concept accuracy: that needs independent labels/film later.
+## Catalog refresh and expansion
 
-## Deferred extension seams
+`--cache-mode revalidate` refetches pages older than TTL or with unknown fetch time. `refresh` refetches all requested pages. `snapshot` only uses existing hash-valid pages and fails on missing/corrupt pages. Source records distinguish fetched time from observed/run time; legacy pages retain unknown fetch time rather than receiving an invented date.
 
-A future verified catalog or film adapter can provide exact alignment, full concept labels, motion, protection and QB progression without changing TeamStore. Keep publisher proxies and verified labels as separate evidence channels. Roster/player assignment, opponent-conditioned performance, injury risk and weather simulation should consume these explicit unknowns rather than assume they are established by this stage.
+Detail-page selection now balances formation, set, personnel and route-tag metadata coverage with deterministic tie-breaking. Increasing `--details` can expand evidence; metadata coverage is not proof of representative route coverage. Paid analysis/private pages and editorial text are not imported. Acquisition failures remain explicit in the catalog envelope.
+
+## Validation boundaries
+
+CI runs the original tests, review counterexamples, failure/corruption tests, source-to-adapter-to-matcher integration for tracking/NONE, and a CLI smoke run. Real validation audits every requested profile and benchmarks indexed/exhaustive accepted candidates with the exact config. Source content fingerprints and staged SQLite writes protect provenance; stages are serialized and snapshot DB/state hash checks fail closed after interrupted publication.
+
+No independent full-NFL-concept labels exist here. No matching accuracy, injury risk, causal player effect, expected EPA, draft value or season win improvement is established. Future uncertainty work should resample by player/game and distinguish cohort missingness from catalog and model uncertainty; current support counts expose these units without claiming that analysis has already been done.
