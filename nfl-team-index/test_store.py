@@ -1,8 +1,12 @@
 import unittest,tempfile,sqlite3
 from pathlib import Path
 import pandas as pd
-from pipeline import TeamStore,norm
+from pipeline import TeamStore,norm,select_receivers
 class StoreTests(unittest.TestCase):
+ def test_slot_receiver_is_not_lost(self):
+  d=pd.DataFrame({'nfl_id':[1,2,3,4,5],'lined_up_position':['WR','SLOT_WR','TE','T','SLOT_CB'],'route_ran':['GO','CROSS',None,None,None]})
+  r=select_receivers(d)
+  self.assertEqual(r.nfl_id.tolist(),[1,2,3]);self.assertEqual(r.loc[r.nfl_id.eq(2),'individual_alignment'].iloc[0],'SOURCE_SLOT');self.assertFalse(r.loc[r.nfl_id.eq(3),'route_labeled'].iloc[0])
  def test_aliases(self):
   self.assertEqual(norm(pd.Series(['LAR','LA','OAK','LV','SD','STL','CHI'])).tolist(),['LA','LA','LV','LV','LAC','LA','CHI'])
  def test_reassembly_and_parameterized_filters(self):

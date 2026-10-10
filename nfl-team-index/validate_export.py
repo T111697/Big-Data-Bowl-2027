@@ -23,7 +23,7 @@ assert set(map(tuple,selected[['game_id','play_id','nfl_id']].to_numpy()))==set(
 checks['benchmark']={'raw_csv_read_filter_median_seconds':statistics.median(raw_times),'indexed_team_season_median_seconds':statistics.median(index_times),'indexed_rows':len(indexed),'raw_filter_scope':'same CHI regular-season 2023 keys, full-column reads','cache_conditions':'same process, three runs, warm filesystem; not universal speed guarantee'}
 checks['benchmark']['ratio']=checks['benchmark']['raw_csv_read_filter_median_seconds']/checks['benchmark']['indexed_team_season_median_seconds']
 checks['receiver_public_join_rate']=float(store.query('SELECT AVG(actual_passer_gsis_id IS NOT NULL) rate FROM receiver_context WHERE target=1').rate.iloc[0])
-exports=P/'exports';exports.mkdir(exist_ok=True)
+exports=P/('exports-v2' if S.name.endswith('v2') else 'exports');exports.mkdir(exist_ok=True)
 for team in checks['canonical_teams']:
  for year in [2023,2024,2025]:
   obj=store.mapping_input(team,year);(exports/f'{team}-{year}-mapping-input.json').write_text(json.dumps(obj,allow_nan=False,separators=(',',':')))

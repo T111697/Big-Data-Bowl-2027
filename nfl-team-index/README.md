@@ -25,7 +25,7 @@ Expected inputs: `restored/data/raw/{games,player_play,players,combine_results,c
 | games | game; regular season 2023–25 |
 | plays | one observed offensive game/play |
 | player_play | game/play/player, indexed by team/season/game |
-| receiver_play | observed offensive WR/TE/RB/FB game/play/player |
+| receiver_play | observed offensive WR/SLOT_WR/TE/RB/FB game/play/player |
 | players / player_identity / combine_results / career_summary | shared player dimensions; team association through game participation |
 | combine_tracking | event/player/time; indexed by player/class/event |
 | team_game | public team/game context, including pregame opponent Elo |
@@ -62,7 +62,7 @@ Exports cover all 32 teams × three seasons. They explicitly identify cohort cov
 
 ## Evidence and limits
 
-The Kaggle sample is a prospect cohort. `receiver_alignment` is a distribution such as 2x2, not an individual slot/outside label. Individual geometry remains receiver-relative, with unresolved slot/side because complete eligible alignment and ball position are not established here. Before producing route trees, use verified alignment data or full eligible/ball observations. Four interpolated trajectory points describe observed execution, not the full planned route or a measured cut capacity. Geometry without exactly one snap and throw event is excluded and audited; initial geometry only covers staged Chicago frames.
+The Kaggle sample is a prospect cohort. `receiver_alignment` is a distribution such as 2x2, not an individual slot/outside label. Individual role is preserved from the source: SLOT_WR→SOURCE_SLOT, WR→SOURCE_WR. WR is not upgraded to a verified outside geometric classification. Left/right remains incomplete because complete eligible alignment and ball position are not established here. Before producing route trees, use verified alignment data or full eligible/ball observations. Four interpolated trajectory points describe observed execution, not the full planned route or a measured cut capacity. Geometry without exactly one snap and throw event is excluded and audited; initial geometry only covers staged Chicago frames.
 
 Target EPA is shared play value. Untargeted routes retain missing target outcomes rather than zero. Sparse flags use fewer than 20 routes or three games. Route shares sum to one within the **observed labeled context**, not the full team offense. Injury report absence does not mean health; snapshots lack some modification times. Public box scores are observed results, not pregame features.
 
@@ -73,3 +73,9 @@ Production evolution: partitioned Parquet plus a SQL query engine can replace th
 ## Validation
 
 Real-data checks cover SQLite integrity, all 32 canonical teams, absence of join fan-out, reconciliation of tendency counts, within-context share sums, reassembly across chunk boundaries, same-key raw-versus-indexed query benchmarks and all-team JSON export. Synthetic tests cover historical aliases, parameterized filters, column validation and trajectory reassembly. Build outputs contain detailed source/configuration and quality manifests; benchmark speed depends on query and cache state.
+
+## Context recovery correction (v1.1.0)
+
+The initial receiver filter omitted SLOT_WR. The corrected snapshot includes 15,436 additional slot-route records, for 43,180 total labeled receiver routes. Earlier mapping exports and the WR-only pilot must not be treated as representative of all WR alignments. The corrected pilot now includes WR and SLOT_WR and has 12 independent 2025 target-outcome test receivers, rather than three. No development association survives multiple-testing correction, and route-interaction Combine features do not improve target-outcome MSE over the body baseline in the corrected test.
+
+Run `python nfl-team-index/context_audit.py --out nfl-team-index/snapshot-v2` after enrichment/geometry. It preserves opponent prospect responsibility categories and computes source-role plus observed-center-relative side proxies where a unique center snap exists. Category labels such as MAN are not receiver identity links. Neither observed nearest defenders nor center proxies constitute verified coverage assignments or exact ball-relative alignment. Context recovery scans source snap events across all teams, independently of the Chicago full-trajectory staging. Rebuild into snapshot-v2 and regenerate exports after this correction.

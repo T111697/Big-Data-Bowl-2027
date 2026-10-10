@@ -3,12 +3,17 @@ from pathlib import Path
 import argparse,sqlite3,json,time,hashlib,os
 import pandas as pd,numpy as np
 KEY=['game_id','play_id','nfl_id']
-VERSION='1.0.0'
+VERSION='1.1.0'
 ALIASES={'OAK':'LV','SD':'LAC','STL':'LA','LAR':'LA'}
 def norm(s):return s.replace(ALIASES)
 def sqlwrite(c,name,d):d.to_sql(name,c,index=False,if_exists='replace',chunksize=2000)
 def signature(p):
  st=p.stat();return dict(path=str(p.resolve()),bytes=st.st_size,mtime_ns=st.st_mtime_ns)
+def select_receivers(offense):
+ receiver=offense[offense.lined_up_position.isin(['WR','SLOT_WR','TE','RB','FB'])].copy()
+ receiver['route_labeled']=receiver.route_ran.notna()
+ receiver['individual_alignment']=receiver.lined_up_position.map({'SLOT_WR':'SOURCE_SLOT','WR':'SOURCE_WR','TE':'SOURCE_TE','RB':'SOURCE_BACK','FB':'SOURCE_BACK'})
+ return receiver
 def build(root,out,tracking_teams=None):
  start=time.perf_counter();out=Path(out);out.mkdir(parents=True,exist_ok=True)
  raw=root/'restored/data/raw';pub=root/'nfl-success-study/outputs'
@@ -39,7 +44,7 @@ def build(root,out,tracking_teams=None):
  plays=offense[attrs].drop_duplicates()
  assert not plays.duplicated(['game_id','play_id']).any(),'Conflicting shared play attributes'
  sqlwrite(c,'plays',plays)
- receiver=offense[offense.lined_up_position.isin(['WR','TE','RB','FB'])].copy();receiver['route_labeled']=receiver.route_ran.notna();sqlwrite(c,'receiver_play',receiver)
+ receiver=select_receivers(offense);sqlwrite(c,'receiver_play',receiver)
  for stmt in ['CREATE UNIQUE INDEX player_play_key ON player_play(game_id,play_id,nfl_id)','CREATE INDEX pp_team ON player_play(team_abbr,season,game_id)','CREATE INDEX receiver_team ON receiver_play(team_abbr,season,game_id,play_id)','CREATE UNIQUE INDEX play_key ON plays(game_id,play_id)','CREATE INDEX play_team ON plays(team_abbr,season)','CREATE INDEX combine_player ON combine_results(nfl_id)','CREATE INDEX box_team ON player_game(team,season,game_id)','CREATE INDEX context_team ON team_game(team,season,old_game_id)']:c.execute(stmt)
  c.execute('CREATE VIEW team_players AS SELECT DISTINCT team_abbr,season,nfl_id FROM player_play')
  c.execute('CREATE VIEW team_combine AS SELECT t.team_abbr,t.season,c.* FROM team_players t JOIN combine_results c USING(nfl_id)')
@@ -56,7 +61,7 @@ def build(root,out,tracking_teams=None):
  for k in groups:routes[k]=routes[k].fillna('UNKNOWN')
  agg=routes.groupby(groups,dropna=False).agg(routes=('play_id','size'),players=('nfl_id','nunique'),games=('game_id','nunique'),targets=('target_flag','sum'),target_epa=('target_epa','mean'),positive_target_rate=('positive_target','mean')).reset_index()
  denom=agg.groupby(groups[:-1]).routes.transform('sum');agg['observed_route_share']=agg.routes/denom;agg['target_rate']=agg.targets/agg.routes
- agg['sparse']=agg.routes.lt(20)|agg.games.lt(3);agg['individual_alignment']='NOT_YET_DERIVED';agg['coverage_scope']='SUPPLIED_COHORT_LABELED_ROUTES';sqlwrite(c,'route_tendencies',agg)
+ agg['sparse']=agg.routes.lt(20)|agg.games.lt(3);agg['individual_alignment']=agg.lined_up_position.map({'SLOT_WR':'SOURCE_SLOT','WR':'SOURCE_WR','TE':'SOURCE_TE','RB':'SOURCE_BACK','FB':'SOURCE_BACK'});agg['coverage_scope']='SUPPLIED_COHORT_LABELED_ROUTES';sqlwrite(c,'route_tendencies',agg)
  # Observed multi-receiver signatures are partial unless independently verified.
  sig=routes.groupby(['team_abbr','season','game_id','play_id']).agg(observed_route_signature=('route_ran',lambda x:'+'.join(sorted(x))),observed_route_count=('nfl_id','size')).reset_index();sig['complete_concept_verified']=False;sqlwrite(c,'observed_signatures',sig)
  shard_rows=[];shard_keys=[];tracking_audit=[];trackdir=out/'tracking';trackdir.mkdir(exist_ok=True)
@@ -85,7 +90,7 @@ class TeamStore:
  def query(self,sql,params=()):
   with sqlite3.connect(self.db) as c:return pd.read_sql_query(sql,c,params=params)
  def table(self,name,team,season,columns=None):
-  allowed={'player_play':'team_abbr','receiver_play':'team_abbr','plays':'team_abbr','team_game':'team','player_game':'team','team_combine':'team_abbr','route_tendencies':'team_abbr','observation_coverage':'team_abbr','observed_signatures':'team_abbr','receiver_context':'team_abbr','injury_reports':'team','snap_counts':'team','team_career':'team_abbr','public_play':'posteam','route_geometry':'team_abbr'}
+  allowed={'player_play':'team_abbr','receiver_play':'team_abbr','plays':'team_abbr','team_game':'team','player_game':'team','team_combine':'team_abbr','route_tendencies':'team_abbr','observation_coverage':'team_abbr','observed_signatures':'team_abbr','receiver_context':'team_abbr','injury_reports':'team','snap_counts':'team','team_career':'team_abbr','public_play':'posteam','route_geometry':'team_abbr','receiver_defender_context':'team_abbr','snap_alignment_context':'team_abbr'}
   if name not in allowed:raise ValueError('Unknown team table')
   cols=self.query(f'PRAGMA table_info({name})')['name'].tolist()
   if columns and not set(columns)<=set(cols):raise ValueError('Unknown column')
@@ -98,6 +103,6 @@ class TeamStore:
    d=pd.read_csv(self.path/ref);parts.append(d[d.game_id.eq(game_id)&d.play_id.eq(play_id)&d.nfl_id.eq(nfl_id)])
   return pd.concat(parts,ignore_index=True).sort_values('time') if parts else pd.DataFrame()
  def mapping_input(self,team,season):
-  return dict(schema_version=VERSION,team=team,season=int(season),source='NFL_OBSERVED_TENDENCIES',alignment_semantics='receiver_alignment is formation distribution; individual location not derived',coverage=self.table('observation_coverage',team,season).replace({np.nan:None}).to_dict('records'),route_requirements=self.table('route_tendencies',team,season).replace({np.nan:None}).to_dict('records'),concept_policy='Partial observed signatures are not verified full concepts',madden_matches=[],call_policy='Observed conditional route shares are not identified play-call frequencies')
+  return dict(schema_version=VERSION,team=team,season=int(season),source='NFL_OBSERVED_TENDENCIES',alignment_semantics='receiver_alignment is formation distribution; individual role from lined_up_position; left/right not yet derived',coverage=self.table('observation_coverage',team,season).replace({np.nan:None}).to_dict('records'),route_requirements=self.table('route_tendencies',team,season).replace({np.nan:None}).to_dict('records'),concept_policy='Partial observed signatures are not verified full concepts',madden_matches=[],call_policy='Observed conditional route shares are not identified play-call frequencies')
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--root',default='.');p.add_argument('--out',default='nfl-team-index/snapshot-v1');p.add_argument('--tracking-teams',default='CHI',help='comma-separated canonical teams, ALL, or NONE');a=p.parse_args();teams=None if a.tracking_teams=='ALL' else ([] if a.tracking_teams=='NONE' else a.tracking_teams.split(','));build(Path(a.root),a.out,teams)
