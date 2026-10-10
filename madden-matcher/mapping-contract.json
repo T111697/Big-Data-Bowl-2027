@@ -1,0 +1,30 @@
+{
+  "algorithm_version": "madden-matcher-1.0",
+  "input": {
+    "schema_version": "1.1.0",
+    "required": ["team", "season", "route_requirements"],
+    "route_cell_fields": ["lined_up_position", "offense_formation", "receiver_alignment", "route_ran", "routes"],
+    "optional_joint_requirements": {
+      "fields": ["formation", "distribution", "observed_slots", "plays"],
+      "observed_slot_fields": ["role", "route"],
+      "scope": "PARTIAL_SAME_PLAY_ROLE_ROUTE_MULTISET",
+      "complete_concept_verified": false
+    }
+  },
+  "catalog": {
+    "schema_version": "madden-catalog-1.0",
+    "game": "Madden NFL 27",
+    "required_play_fields": ["id", "name", "formation", "set_id", "set_name", "personnel", "tags", "routes", "source_url", "route_evidence"],
+    "route_fact_fields": ["slot", "position", "depthChartSlot", "side", "x", "y", "routeName", "confidence"]
+  },
+  "output": {
+    "schema_version": "madden-matcher-1.0",
+    "required": ["team", "season", "playbook", "requirements"],
+    "curated_play_fields": ["play_id", "formation", "set", "personnel", "proposed_weight", "source_url", "assignments", "protection_rules", "read_progression"],
+    "weights": "ASSUMED_MARGINAL_RECONSTRUCTION_MIX_NOT_IDENTIFIED_NFL_CALL_FREQUENCY",
+    "unknowns": ["NFL full concepts", "motion compatibility", "QB progression", "protection rules", "intended adjustments", "native Madden import format"],
+    "score": "HEURISTIC_COMPATIBILITY_NOT_CALIBRATED_PROBABILITY",
+    "objective": "PROJECTED_COMPATIBLE_OBSERVED_ROUTE_FEATURES_NOT_EPA_OR_WIN_VALUE"
+  },
+  "contract_type": "DOCUMENTED_INTERFACE_NOT_JSON_SCHEMA"
+}

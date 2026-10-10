@@ -14,3 +14,6 @@ nfl-team-index/snapshot*/
 nfl-team-index/exports/
 nfl-team-index/private_upload_helpers/
 nfl-team-index/validation.json
+nfl-team-index/exports-v2/
+madden-matcher/data/
+madden-matcher/outputs/

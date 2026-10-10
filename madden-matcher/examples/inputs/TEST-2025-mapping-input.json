@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.1.0",
+  "team": "TEST",
+  "season": 2025,
+  "route_requirements": [
+    {
+      "route_ran": "GO",
+      "lined_up_position": "WR",
+      "offense_formation": "SHOTGUN",
+      "receiver_alignment": "1x1",
+      "routes": 30,
+      "games": 3,
+      "motion": false,
+      "down": 1
+    }
+  ],
+  "joint_requirements": []
+}
