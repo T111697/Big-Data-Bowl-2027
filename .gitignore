@@ -17,3 +17,6 @@ nfl-team-index/validation.json
 nfl-team-index/exports-v2/
 madden-matcher/data/
 madden-matcher/outputs/
+nfl-team-index/exports-v3*/
+madden-matcher/validation*.json
+madden-matcher/hardening-comparison.json

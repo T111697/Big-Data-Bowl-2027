@@ -5,9 +5,11 @@
   "max_play_weight": 0.35,
   "prior_routes": 20,
   "joint_weight": 0.2,
-  "ridge": 1e-05,
+  "ridge": 0.00001,
   "top_k": 5,
   "include_hybrid": false,
+  "positive_weight_threshold": 0.00000001,
+  "prune_zero_weight": true,
   "allowed_personnel": [],
   "locked_play_ids": [],
   "excluded_play_ids": []

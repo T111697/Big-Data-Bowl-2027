@@ -1,3 +1,5 @@
+> Historical v1.1.0 correction. The current hardened run and defaults are documented in README.md.
+
 # Context recovery audit
 
 ## Resolved from supplied data
