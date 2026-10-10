@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.sqlite
+*.sqlite-*
+*.csv
+*.csv.gz
+*.zip
+.env
+.kaggle/
+restored/
+nfl-success-study/raw/
+nfl-success-study/outputs/
+nfl-team-index/snapshot*/
+nfl-team-index/exports/
+nfl-team-index/private_upload_helpers/
+nfl-team-index/validation.json
