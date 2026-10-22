@@ -1,36 +1,32 @@
-# Stage 2 validation snapshot
+# Hardened validation snapshot
 
-Run against the corrected PR #1 index and the public catalog acquired on October 10, 2026. This is structural and reconstruction validation. There are no independent NFL full-concept labels, so concept accuracy, expected EPA and win improvement have not been measured.
+Validated all 96 team-season profiles against a freshly rebuilt preparation snapshot, holding the original public Madden catalog constant. These are structural/reconstruction checks, not independently labeled NFL concept accuracy.
 
 | Check | Result |
 | --- | --- |
-| Public catalog | 1,364 plays, 44 sets, 919 pure passing candidates |
-| Detailed route evidence | 160 pages requested, 159 plays with annotations |
-| Acquisition | 205 pages fetched, zero recorded failures |
-| NFL team-season profiles | 96 across all 32 teams and 2023–2025 |
-| Partial role-route combinations | 6,989 aggregated cells before canonical filtering |
-| Output statuses | 86 curated; 10 abstained for no eligible observations |
-| Cold batch | 3.38 seconds locally, catalog compilation before the timer |
-| Cached batch | 0.32 seconds locally, all 96 cache hits |
-| Chicago 2025 accepted-candidate parity | Indexed and exhaustive matching identical |
-| Chicago 2025 scored comparisons | 727 indexed vs 211,370 exhaustive pure-pass comparisons |
-| Chicago 2025 benchmark | 0.036s indexed vs 0.106s exhaustive; approximately 3× locally |
-| Constraints | All curated weights finite, nonnegative, sum to 1 and satisfy cap; play/set budgets satisfied |
-| Receiver slot integrity | Every reported joint assignment uses distinct catalog slots |
-| Deferred responsibilities | Protection and QB progression remain null |
+| Local tests | 40 pass: 3 original preparation tests and 37 matcher/integration/regression tests |
+| Source profiles | 32 teams × 2023–2025 |
+| Catalog held constant | 1,364 plays, 919 pure passing candidates, 159 annotated plays |
+| Output status | 86 curated; 10 explicit no-observation abstentions |
+| Previously blocked EMPTY observations with executable candidates | 4,353 of 4,911; availability, not selected-book/full-offense coverage |
+| Negligible selected play weights | Zero in the regenerated default batch after pruning/refit |
+| Cold isolated batch | 5.68 seconds locally, including catalog/input/run publication overhead |
+| Warm isolated batch | 0.53 seconds locally, all 96 hash-verified cache hits |
+| Chicago 2025 indexed/dense accepted candidates | Identical; 793 vs 211,370 comparisons (99.62% reduction) |
+| Chicago benchmark timing | 0.034s indexed vs 0.182s dense locally |
+| Geometry | 1,193 trajectories retained; one-game batches, peak 4,267 frames |
+| Source unknown motion | 11 eligible observations remain unknown rather than no-motion |
+| Custom/subset validation | Byte-preserving, no inspected run mutation |
+| Frozen artifacts | Catalog, exact profile inputs, source-key lineage, config and checksums |
 
-Timings depend on hardware and catalog breadth. The 99.66% comparison reduction is for the Chicago benchmark, not a universal performance guarantee. Reconstruction diagnostics may be poor even when software constraints pass; no residual threshold is disguised as an accuracy test.
+Comparison of selected-book individual route support:
 
-## Chicago examples
+| Chicago season | Previous | Hardened | Hardened selected plays |
+| --- | ---: | ---: | ---: |
+| 2023 | 83.5% | 83.5% | 11 |
+| 2024 | 77.3% | 74.5% | 7 |
+| 2025 | 75.7% | 78.9% | 19 |
 
-| Season | Selected plays | Individual route compatibility coverage | Weighted feature coverage | Projected feature TV distance |
-| --- | ---: | ---: | ---: | ---: |
-| 2023 | 15 | 83.5% | 83.5% | 0.300 |
-| 2024 | 20 | 77.3% | 81.9% | 0.420 |
-| 2025 | 24 | 75.7% | 65.7% | 0.434 |
+Coverage is not uniformly higher. Scoring now preserves generic source-WR uncertainty, selection uses corrected counts, and fitting uses separate channels. Different selected books are expected. Version 1 and version 2 feature-distance/objective values are not directly comparable because their definitions changed. No improved football value or concept accuracy is inferred from these numbers.
 
-Coverage is conditional on the supplied observed cohort and bounded catalog. The joint channel is partial; it is not a verified complete-concept channel. These numbers do not represent full-offense coverage or ground-truth Madden matching accuracy.
-
-## Reproduce
-
-Use `build_inputs.py`, `cli.py` and `validate.py` as described in the README. The validation JSON contains every team-season record and benchmark counters. The test suite uses synthetic fixtures and requires no restricted datasets, network or credentials. GitHub CI also runs the merged layer's tests and a synthetic CLI export smoke test.
+The generated report records run ID e7e2a12dfec59abb235072397b364f6860bc4c5cb8bd97896dfbe2a013617338, manifest hash, all profile diagnostics and benchmark counters. Runtime is hardware/catalog dependent. The source snapshot and its manifest record complete content hashes and capabilities; source data and generated exports are distributed separately from code.

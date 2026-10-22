@@ -1,1 +1,14 @@
-{"schema_version":"1.1.0","team":"CHI","season":2025,"source":"NFL_OBSERVED_TENDENCIES","alignment_semantics":"formation distribution plus source lineup role; left/right remains incomplete","coverage":[],"route_requirements":[],"concept_policy":"Partial observed signatures are not verified full concepts","madden_matches":[],"call_policy":"Observed conditional route shares are not identified play-call frequencies"}
+{
+  "schema_version": "1.2.0",
+  "producer_version": "team-index-2.0",
+  "required": ["team", "season", "route_requirements", "source_snapshot_id", "capabilities"],
+  "coverage_scope": "SUPPLIED_COHORT_LABELED_ROUTES",
+  "motion": ["TRUE", "FALSE", "UNKNOWN"],
+  "source_WR": "GENERIC_WR_NOT_VERIFIED_OUTSIDE",
+  "source_SLOT_WR": "SOURCE_SLOT_ROLE_NOT_VERIFIED_FULL_GEOMETRY",
+  "feature_id": "Stable hash of source context dimensions",
+  "capabilities": "Declared by completed snapshot stages; never inferred from folder name",
+  "publication": "Hashed input manifest published after files; immutable downstream run freezes exact inputs",
+  "concept_policy": "Partial signatures are not verified full concepts",
+  "call_policy": "Observed route shares do not identify NFL play-call frequencies"
+}
